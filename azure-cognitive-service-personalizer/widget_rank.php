@@ -68,8 +68,12 @@ class MSFTCPS_Rank_Widget extends WP_Widget {
 		$tag           = isset( $instance['tag'] ) ? esc_attr( $instance['tag'] ) : '';
 		?>
 
+		<p>
+		Create an <a href="https://ms.portal.azure.com/#create/Microsoft.CognitiveServicesPersonalizer">Azure Cognitive Service Personalizer</a> instance to get endpoint and key.
+		</p>
+
         <p>
-		<label for="<?php echo $this->get_field_id( 'endpoint' ); ?>"><?php _e( 'Azure Cognitive Service Endpoint:' ); ?></label> 
+		<label for="<?php echo $this->get_field_id( 'endpoint' ); ?>"><?php _e( 'Azure Cognitive Service Personalizer Endpoint:' ); ?></label> 
 		<input	class="widefat" type="text"
 			id="<?php echo $this->get_field_id( 'endpoint' ); ?>"
 			name="<?php echo $this->get_field_name( 'endpoint' ); ?>"
@@ -77,7 +81,7 @@ class MSFTCPS_Rank_Widget extends WP_Widget {
 		</p>
 
         <p>
-		<label for="<?php echo $this->get_field_id( 'key' ); ?>"><?php _e( 'Azure Cognitive Service Key:' ); ?></label> 
+		<label for="<?php echo $this->get_field_id( 'key' ); ?>"><?php _e( 'Azure Cognitive Service Personalizer Key:' ); ?></label> 
 		<input	class="widefat" type="text"
 			id="<?php echo $this->get_field_id( 'key' ); ?>"
 			name="<?php echo $this->get_field_name( 'key' ); ?>"
