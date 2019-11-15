@@ -1,12 +1,12 @@
 <?php
 
-require_once 'vendor/autoload.php';
-use UAParser\Parser;
+require_once 'vendor/autoload.php'; 
+require 'features/geo.php';
+require 'features/user_agent.php';
+require 'features/post.php';
+require 'cognitive_service_personalizer.php';
 
 class MSFTCPS_Rank_Widget extends WP_Widget {
-
-	protected static $did_script = false;
-
 	/**
 	 * Sets up the widgets name etc
 	 */
@@ -16,16 +16,7 @@ class MSFTCPS_Rank_Widget extends WP_Widget {
 			'description' => __( 'Personalize ranking of your articles.' ),
 		);
 		parent::__construct( 'msftcps_rank_widget', __( 'Personalized Post' ), $widget_ops );
-
-		add_action('wp_enqueue_scripts', array($this, 'scripts'), 0);
 	} 
-
-	function scripts(){
-
-		if(!self::$did_script && is_active_widget(false, false, $this->id_base, true)){
-			self::$did_script = true;
-		}          
-	}
 
 	/**
 	 * Outputs the content of the widget
@@ -38,8 +29,7 @@ class MSFTCPS_Rank_Widget extends WP_Widget {
 
 		/** This filter is documented in wp-includes/widgets/class-wp-widget-pages.php */
         $title = apply_filters( 'widget_title', $title, $instance, $this->id_base );
-
-       ?>
+        ?>
         <?php echo $args['before_widget']; ?>
 		<?php
 		if ( $title ) {
@@ -49,6 +39,7 @@ class MSFTCPS_Rank_Widget extends WP_Widget {
 		$widget_nr = substr($this->id, strlen('msftcps_rank_widget') + 1);
 		$element_id = "microsoft-personalizer-rank-" . $widget_nr;
  
+		// load the personalization through AJAX to avoid caching and keep the main page load time down.
 		?>
 		<div id="<?php echo $element_id;?>" class="microsoft-personalizer-rank"> </div>
 		<script language="JavaScript"> 
@@ -60,12 +51,6 @@ class MSFTCPS_Rank_Widget extends WP_Widget {
 		</script>
         <?php
 		echo $args['after_widget'];
-	}
-
-	private function form_field($instance, $field, $default) {
-		if ( empty( $instance[$field] ) )
-			return __( $default, 'msft_cps_domain' );
-		return $instance[$field];
 	}
 
 	/**
@@ -123,6 +108,12 @@ class MSFTCPS_Rank_Widget extends WP_Widget {
 			value="<?php echo esc_attr( $tags ); ?>">
 		</p>
 
+		<? if ( ! function_exists('geoip_detect2_get_info_from_ip') ) : ?>
+		<p style="color:red">
+			To improve personalization results please install <a href="https://wordpress.org/plugins/geoip-detect/">geoip-detect</a>.
+			For best latency switch to a local file and not use the default HostIP.info Web-API.
+		</p> 
+		<? endif; ?>
 		<?php 
 	}
 
@@ -143,66 +134,37 @@ class MSFTCPS_Rank_Widget extends WP_Widget {
 	}
 }
 
-function splitStringToMap($str) {
-	$words = preg_split('/\s+/', $str);
+function rest_msft_rank_query( $instance ) {
+	$query_args = array(
+		'posts_per_page'      => 5, // make sure we don't supply to many actions
+		'no_found_rows'       => true,
+		'post_status'         => 'publish',
+		'ignore_sticky_posts' => true
+	);
 
-    $map = array();
-    foreach( $words as $w ) { 
-		$map[$w] = 1; // could also sum()
-	}
+	if ( ! empty ( $instance['category_name'] ) ) 
+		$query_args['category_name'] = $instance['category_name'];
 
-	return $map;
+	if ( ! empty ( $instance['tag'] ) ) 
+		$query_args['tag'] = $instance['tag'];
+
+	return new WP_Query(
+		apply_filters(
+			'widget_personalized_post_args',
+			$query_args,
+			$instance
+		)
+	);
 }
 
 // Good intro: https://developer.wordpress.org/rest-api/extending-the-rest-api/adding-custom-endpoints/
 function rest_msft_rank( WP_REST_Request $request ) {
 		$widget_id = $request['id'];
 
-		// User Agent Parsing
-		$parser = Parser::create();
-		$uaResult = $parser->parse($_SERVER['HTTP_USER_AGENT']);
-
-		// Geo IP
-		if (function_exists('geoip_detect2_get_info_from_ip')) 
-		{
-			if ( ! empty( $_SERVER['HTTP_CLIENT_IP'] ) ) {
-				//check ip from share internet
-				$ip = $_SERVER['HTTP_CLIENT_IP'];
-			} elseif ( ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
-				//to check ip is pass from proxy
-				$ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
-			} else {
-				$ip = $_SERVER['REMOTE_ADDR'];
-			}
-
-			$ip = preg_replace('/:[0-9]+$/', '', $ip);
-
-			$geo_result = geoip_detect2_get_info_from_ip($ip);
-		}
-
 		$widget_instances = get_option('widget_msftcps_rank_widget');
 		$instance = $widget_instances[$widget_id];
 
-        $query_args = array(
-            'posts_per_page'      => 5, // make sure we don't supply to many actions
-            'no_found_rows'       => true,
-            'post_status'         => 'publish',
-            'ignore_sticky_posts' => true
-        );
-
-        if ( ! empty ( $instance['category_name'] ) ) 
-            $query_args['category_name'] = $instance['category_name'];
-
-        if ( ! empty ( $instance['tag'] ) ) 
-            $query_args['tag'] = $instance['tag'];
-
-        $query = new WP_Query(
-			apply_filters(
-				'widget_personalized_post_args',
-				$query_args,
-				$instance
-			)
-		);
+		$query = rest_msft_rank_query( $instance );
 
 		$actions = array();
 		$posts_output = array();
@@ -216,39 +178,10 @@ function rest_msft_rank( WP_REST_Request $request ) {
 				$post_title = get_the_title();
 				$permalink = get_the_permalink();
 
-				$features = array(
-						'Atitle' => splitStringToMap($post_title),
-						'Bexcerpt' => splitStringToMap(get_the_excerpt()),
-						'_URL' => $permalink
-				);
-
-				// extract the categories
-				$the_categories = get_the_category();
-
-				if ( ! empty ($the_categories ) ) {
-					$categories = array();
-					foreach ( $the_categories as $cat ) {
-						$categories[$cat->name] = 1;
-					}
-
-					$features['Categories'] = $categories;
-				}
-
-				// extract the tags
-				$the_tags = get_the_tags();
-				if ( ! empty( $the_tags ) ) {
-					$tags = array();
-					foreach ( $the_tags as $tag ) {
-						$tags[$tag->name] = 1;
-					}
-
-					$features['Tags'] = $tags;
-				}
-
 				// construct Azure Cognitive Service Personalizer request
 				array_push($actions, array(
 					'id' => $post_id,
-					'features' => array($features)
+					'features' => array(msft_personalize_features_post())
 				));
 
 				// construct the output, should be cheap and we don't have to keep the posts around?
@@ -257,52 +190,21 @@ function rest_msft_rank( WP_REST_Request $request ) {
 			}
 		}
 
-		// featurize geo location
-		$location = array();
-		if ( !is_null($geo_result) ) {
-			if ( isset($geo_result->country) ) { 
-				$location['CountryISO'] = $geo_result->country->isoCode;
-			}
-
-			if ( isset($geo_result->state) ) { 
-				$location['StateISO'] = $geo_result->state->isoCode;
-			} 
-		}
-
-		// build the final request
+		// build the ranking request
 		$rank_request = json_encode(array(
 			'contextFeatures' => array(array(
-				'location' => $location,
-				'device' => array(
-					'OSFamily' => $uaResult->os->family,
-					'UAFamily' => $uaResult->ua->family,
-					'DeviceFamily' => $uaResult->device->family,
-					'DeviceBrand' => $uaResult->device->brand,
-					'DeviceModel' => $uaResult->device->model
-				) 
-			)), 
+				'location' => msft_personalize_features_geo(),
+				'device' =>  msft_personalize_features_user_agent()
+			)),
 			'actions' => $actions, 
 			'deferActivation' => false
 		));
 
 		// invoke the Azure Cognitive Service
-		$endpoint = $instance['endpoint'];
-		$key = $instance['key'];
-		
-		$rank_url = $endpoint . 'personalizer/v1.0/rank';
-
-		$headers = array(
-			'Ocp-Apim-Subscription-Key' => $key,
-			'Content-Type' => 'application/json'
-		);
-
-		$personalizer_response = wp_remote_post($rank_url, array(
-			'method' => 'POST',
-			'timeout' => 30,
-			'headers' => $headers,
-			'blocking' => true,
-			'body' => $rank_request
-		)); 
+		$personalizer_response = msft_personalize_rank_request(
+			$instance['endpoint'],
+			$instance['key'],
+			$rank_request);
 
 		if ( is_wp_error( $personalizer_response ) ) {
 			return 'Failed to contact Azure Cognitive Service Personalizer: ' . $personalizer_response->get_error_message();
@@ -348,23 +250,11 @@ function filter_the_content_msft_reward( $content ) {
 						$instance = $widget_instances[$widget_id];
 
 						// invoke the Azure Cognitive Service
-						$endpoint = $instance['endpoint'];
-						$key = $instance['key'];
-						
-						$reward_url = $endpoint . 'personalizer/v1.0/events/' . $event_id . '/reward';
 
-						$headers = array(
-							'Ocp-Apim-Subscription-Key' => $key,
-							'Content-Type' => 'application/json'
-						);
-
-						$personalizer_response = wp_remote_post($reward_url, array(
-							'method' => 'POST',
-							'timeout' => 30,
-							'headers' => $headers,
-							'blocking' => true,
-							'body' => '{"value":1}'
-						)); 
+						$personalizer_response = msft_personalize_reward_request(
+							$instance['endpoint'],
+							$instance['key'],
+							$event_id);
 
 						if ( is_wp_error( $personalizer_response ) ) {
 							error_log( "Failed to reward Azure Cognitive Service" );
@@ -397,7 +287,6 @@ add_action( 'rest_api_init', function () {
 
 add_action( 'widgets_init', create_function( '', 'return register_widget("MSFTCPS_Rank_Widget");' ) );
 add_filter( 'the_content', 'filter_the_content_msft_reward' );
- 
 
 // TODO: don't get how to just ask for jquery (w/o empty script)
 wp_enqueue_script( 'microsoft-personalizer-frontend', plugins_url( 'personalizer-cms/js/frontend.js' ),  array( 'jquery' ), null, false );
