@@ -1,4 +1,5 @@
 <?php
+defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
 // TODO: support post id
 function msft_personalize_features_post() {

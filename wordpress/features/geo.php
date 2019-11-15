@@ -1,4 +1,5 @@
 <?php
+defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
 /**
  * Provide geo-location features for the current request using https://wordpress.org/plugins/geoip-detect/.

@@ -3,7 +3,6 @@ page_type: sample
 languages:
 - python
 description: "WordPress plugin for Azure Cognitive Service Personalizer"
-urlFragment: "update-this-to-unique-url-stub"
 ---
 
 # Official Microsoft Sample
