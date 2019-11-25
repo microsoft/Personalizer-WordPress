@@ -1,5 +1,5 @@
 <?php
-defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
+defined( 'ABSPATH' ) or die( 'Epic fail!' );
 
 /**
  * @package Azure Cognitive Service Personalizer
@@ -14,8 +14,8 @@ Version: 1.0
 Author URI: https://github.com/microsoft/Personalizer-WordPress
 */
 
-require_once ABSPATH . '/wp-content/plugins/personalizer-cms/options.php';
-require_once ABSPATH . '/wp-content/plugins/personalizer-cms/widget_rank.php';
-require_once ABSPATH . '/wp-content/plugins/personalizer-cms/widget_track.php';
+require_once plugin_dir_path( __FILE__ ) . '/options.php';
+require_once plugin_dir_path( __FILE__ ) . '/widget_rank.php';
+require_once plugin_dir_path( __FILE__ ) . '/widget_track.php';
 
 ?>

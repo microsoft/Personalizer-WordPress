@@ -1,5 +1,5 @@
 <?php
-defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
+defined( 'ABSPATH' ) or die( 'Epic fail!' );
 
 // TODO: support post id
 function msft_personalize_features_post() {
@@ -7,8 +7,8 @@ function msft_personalize_features_post() {
 	$permalink = get_the_permalink();
 
 	$features = array(
-			'Atitle' => splitStringToMap($post_title),
-			'Bexcerpt' => splitStringToMap(get_the_excerpt()),
+			'Atitle' => msft_personalize_split_string_to_map($post_title),
+			'Bexcerpt' => msft_personalize_split_string_to_map(get_the_excerpt()),
 			'_URL' => $permalink
 	);
 
@@ -38,7 +38,7 @@ function msft_personalize_features_post() {
 	return $features;
 }
 
-function splitStringToMap($str) {
+function msft_personalize_split_string_to_map($str) {
 	$words = preg_split('/\s+/', $str);
 
     $map = array();

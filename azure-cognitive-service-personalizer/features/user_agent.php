@@ -1,12 +1,12 @@
 <?php
-defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
+defined( 'ABSPATH' ) or die( 'Epic fail!' );
   
 use UAParser\Parser;
 
 function msft_personalize_features_user_agent() {
 	// User Agent Parsing
 	$parser = Parser::create();
-	$uaResult = $parser->parse($_SERVER['HTTP_USER_AGENT']);
+	$uaResult = $parser->parse( $_SERVER['HTTP_USER_AGENT'] );
 
 	return array(
 		'OSFamily' => $uaResult->os->family,

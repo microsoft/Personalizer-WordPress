@@ -1,5 +1,5 @@
 <?php 
-defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
+defined( 'ABSPATH' ) or die( 'Epic fail!' );
 
 function msft_personalize_rank_request( $endpoint, $key, $rank_request ) {
 	$rank_url = $endpoint . 'personalizer/v1.0/rank';
