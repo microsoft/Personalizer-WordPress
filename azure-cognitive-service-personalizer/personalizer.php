@@ -14,8 +14,6 @@ Version: 1.0
 Author URI: https://github.com/microsoft/Personalizer-WordPress
 */
 
-require_once plugin_dir_path( __FILE__ ) . '/options.php';
-require_once plugin_dir_path( __FILE__ ) . '/widget_rank.php';
-require_once plugin_dir_path( __FILE__ ) . '/widget_track.php';
+require_once plugin_dir_path( __FILE__ ) . 'widget_rank.php';
 
 ?>
